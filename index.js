@@ -9,7 +9,7 @@ require("dotenv").config();
 const app = express();
 
 // CORS configuration to allow specific origins
-const allowedOrigins = ["https://saviral-foods.vercel.app", "http://localhost:5173"]; // Add any other origins you need
+const allowedOrigins = ["https://saviral-foods.vercel.app", "http://localhost:5173","http://saviralfoods.in","www.saviralfoods.in"]; // Add any other origins you need
 
 app.use(
   cors({
