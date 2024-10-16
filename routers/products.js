@@ -5,15 +5,31 @@ const multer = require("multer");
 
 const GridFSStream = require("gridfs-stream");
 const { Product } = require("../models/product");
-const { gfs} = require("../db");
+const { gfs } = require("../db");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 router.get(`/`, async (req, res) => {
   try {
-    const productList = await Product.find();
-    res.status(200).json(productList); // Send empty array if no products are found
+    if (!req.query.page && !req.query.limit) {
+      const products = await Product.find();
+      return res.status(200).json(products);
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 9;
+    const skip = (page - 1) * limit;
+
+    const productList = await Product.find().skip(skip).limit(limit);
+    const totalProducts = await Product.countDocuments();
+
+    res.status(200).json({
+      products: productList,
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit),
+      hasMore: page * limit < totalProducts
+    });
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -64,21 +80,18 @@ router.post(
         name,
         product_id,
         desc,
-        price,
         category,
-        quantity,
         countInStock,
+        quantityPrices,
       } = req.body;
-      // Create new product
 
       const updateData = {
         name,
         product_id,
         desc,
-        price,
         category,
-        quantity,
         countInStock,
+        quantityPrices: JSON.parse(quantityPrices),
         Image: req.files.Image ? req.files.Image[0].buffer : null,
         Image1: req.files.Image1 ? req.files.Image1[0].buffer : null,
         Image2: req.files.Image2 ? req.files.Image2[0].buffer : null,
@@ -94,7 +107,7 @@ router.post(
       }
 
       const newProduct = new Product(updateData);
-      const response = await newProduct?.save();
+      const response = await newProduct.save();
       if (response) {
         res.status(201).json({ success: true });
       } else {
@@ -102,8 +115,6 @@ router.post(
           .status(400)
           .json({ success: false, message: "Error creating product" });
       }
-
-      // Save product to database
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -111,7 +122,7 @@ router.post(
 );
 
 router.put(
-  "/",
+  "/:product_id",
   upload.fields([
     { name: "Image", maxCount: 1 },
     { name: "Image1", maxCount: 1 },
@@ -120,32 +131,29 @@ router.put(
   ]),
   async (req, res) => {
     try {
+      const { product_id } = req.params;
       const {
         name,
-        product_id,
         desc,
-        price,
         category,
-        quantity,
         countInStock,
+        quantityPrices,
       } = req.body;
-      // Create new product
 
       const updateData = {};
 
       const isProductExist = await Product.findOne({ product_id });
       if (!isProductExist) {
-        return res.status(400).json({
+        return res.status(404).json({
           success: false,
-          message: "Product doesn't exists",
+          message: "Product doesn't exist",
         });
       }
       if (name) updateData.name = name;
       if (desc) updateData.desc = desc;
-      if (price) updateData.price = price;
       if (category) updateData.category = category;
-      if (quantity) updateData.quantity = quantity;
       if (countInStock) updateData.countInStock = countInStock;
+      if (quantityPrices) updateData.quantityPrices = JSON.parse(quantityPrices);
       if (req?.files?.Image) updateData.Image = req.files.Image[0].buffer;
       if (req?.files?.Image1) updateData.Image1 = req.files.Image1[0].buffer;
       if (req?.files?.Image2) updateData.Image2 = req.files.Image2[0].buffer;
@@ -155,26 +163,21 @@ router.put(
         { product_id: product_id },
         updateData,
         {
-          new: true, // Return the updated document
-          upsert: true, // Create the document if it doesn't exist
-          runValidators: true, // Validate the update data
+          new: true,
+          runValidators: true,
         }
       );
-      if (response) {
-        res.status(201).json({ success: true });
-      } else {
-        res
-          .status(400)
-          .json({ success: false, message: "Error creating product" });
-      }
 
-      // Save product to database
+      if (response) {
+        res.status(200).json({ success: true, product: response });
+      } else {
+        res.status(400).json({ success: false, message: "Error updating product" });
+      }
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
   }
 );
-
 router.delete(`/:id`, async (req, res) => {
   const { id } = req.params;
 

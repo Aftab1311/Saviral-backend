@@ -1,5 +1,16 @@
 const mongoose = require("mongoose");
 
+const quantityPriceSchema = new mongoose.Schema({
+  quantity: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+});
+
 const productSchema = mongoose.Schema({
   name: {
     type: String,
@@ -29,17 +40,10 @@ const productSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  price: {
-    type: Number,
-    default: 0,
-  },
+  quantityPrices: [quantityPriceSchema],
   category: {
     type: String,
     required: true,
-  },
-  quantity: {
-    type: String,
-    default: "",
   },
   countInStock: {
     type: Number,
