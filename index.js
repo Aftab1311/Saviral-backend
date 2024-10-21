@@ -36,6 +36,10 @@ const couponRouter = require("./routers/couponroute");
 
 const api = process.env.API_URL;
 
+
+
+
+
 // Middleware
 app.use(bodyParser.json());
 app.use(morgan("tiny"));
@@ -45,6 +49,11 @@ app.use(`${api}/products`, productsRouter);
 app.use(`${api}/users`, usersRouter);
 app.use(`${api}/orders`, ordersRouter);
 app.use(`${api}/coupons`, couponRouter);
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'same-origin');
+  next();
+});
 
 // Server
 app.listen(8000, () => {

@@ -3,15 +3,63 @@ const router = express.Router();
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const { OAuth2Client } = require("google-auth-library");
 
 const twilio = require("twilio");
 const { forgotPassword, resetPassword } = require('../controllers/userController');
 const accountSid = process.env.TWILIO_ACCOUNT_SID; // Your Twilio Account SID
 const authToken = process.env.TWILIO_AUTH_TOKEN; // Your Twilio Auth Token
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-// Secret key for JWT (should be in environment variables in production)
-const JWT_SECRET = process.env.JWT_SECRET;
 
+
+
+
+const JWT_SECRET = process.env.JWT_SECRET; // Your JWT secret
+const googleClientId = process.env.GOOGLE_CLIENT_ID; // Your Google Client ID
+const gpiclient = new OAuth2Client(googleClientId);
+
+router.post("/google-login", async (req, res) => {
+  const { token } = req.body; // Get the token from the request body
+
+  try {
+    // Verify Google token
+    const ticket = await gpiclient.verifyIdToken({
+      idToken: token,
+      audience: googleClientId, // Ensure the client ID matches
+    });
+
+    const { email, name, sub: googleId } = ticket.getPayload(); // Extract user info from token
+
+    // Create or update the user in the database
+    const user = await User.findOneAndUpdate(
+      { googleId }, // Find user by googleId
+      { name, email, googleId }, // Update user details
+      { new: true, upsert: true } // Create user if not exists
+    );
+
+    // Generate JWT token for the user
+    const jwtToken = jwt.sign(
+      { id: user._id, email: user.email, name: user.name, phone: user.phone },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // Send the token and user data to the client
+    res.status(200).json({
+      message: "Google login successful",
+      token: jwtToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
+    res.status(401).json({ error: "Google authentication failed" });
+  }
+});
 // Signup route
 router.post("/signup", async (req, res) => {
   const { name, email, phone, password } = req.body;
