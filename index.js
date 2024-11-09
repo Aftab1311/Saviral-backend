@@ -39,10 +39,6 @@ const couponRouter = require("./routers/couponroute");
 
 const api = process.env.API_URL;
 
-
-
-
-
 // Middleware
 app.use(bodyParser.json());
 app.use(morgan("tiny"));
