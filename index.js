@@ -59,8 +59,8 @@ app.use((req, res, next) => {
 });
 
 
-let merchantId = process.env.MERCHANT_ID2;
-let salt_key = process.env.SALT_KEY2;
+let merchantId = process.env.MERCHANT_ID1;
+let salt_key = process.env.SALT_KEY1;
 
 app.post("/neworder", async (req, res) => {
   const { user, items, shippingInfo, totalPrice, MUID, transactionId } =
@@ -73,8 +73,8 @@ app.post("/neworder", async (req, res) => {
     items: items, // Use items directly from request body
     shippingInfo,
     amount: totalPrice * 100,
-    redirectUrl: `${process.env.FRONTEND_URL2}/${transactionId}`,
-    callbackUrl: `http://localhost:5173`,
+    redirectUrl: `${process.env.FRONTEND_URL1}/${transactionId}`,
+    callbackUrl: `http://saviralfoods.in`,
     redirectMode: "REDIRECT",
     paymentInstrument: {
       type: "PAY_PAGE",
@@ -100,7 +100,7 @@ app.post("/neworder", async (req, res) => {
     const sha256 = crypto.createHash("sha256").update(string).digest("hex");
     const checksum = sha256 + "###" + keyIndex;
 
-    const prod_URL = process.env.PHONEPAY_API2;
+    const prod_URL = process.env.PHONEPAY_API1;
 
     const options = {
       method: "POST",
@@ -166,7 +166,7 @@ app.get("/status", async (req, res) => {
     // Call the PhonePe status API
     const options = {
       method: 'GET',
-      url: process.env.STATUS_API2 + `/pg/v1/status/${merchantId}/${merchantTransactionId}`,
+      url: process.env.STATUS_API1 + `/pg/v1/status/${merchantId}/${merchantTransactionId}`,
       headers: {
         accept: 'application/json',
         'Content-Type': 'application/json',
