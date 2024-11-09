@@ -3,7 +3,7 @@ const Order = require('../models/orderModel');
 // Create a new order
 const createOrder = async (req, res) => {
     try {
-        const { userId, cartItems, shippingInfo, totalPrice } = req.body;
+        const { userId, cartItems=[], shippingInfo, totalPrice } = req.body;
 
         // Create the order
         const newOrder = new Order({

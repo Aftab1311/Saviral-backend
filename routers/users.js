@@ -28,12 +28,12 @@ router.post("/google-login", async (req, res) => {
       audience: googleClientId, // Ensure the client ID matches
     });
 
-    const { email, name, sub: googleId } = ticket.getPayload(); // Extract user info from token
+    const { email, name, sub: googleId,picture } = ticket.getPayload(); // Extract user info from token
 
     // Create or update the user in the database
     const user = await User.findOneAndUpdate(
       { googleId }, // Find user by googleId
-      { name, email, googleId }, // Update user details
+      { name, email, googleId ,picture}, // Update user details
       { new: true, upsert: true } // Create user if not exists
     );
 
@@ -53,6 +53,7 @@ router.post("/google-login", async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        picture: picture,
       },
     });
   } catch (error) {
