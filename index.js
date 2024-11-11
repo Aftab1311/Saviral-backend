@@ -59,16 +59,19 @@ let merchantId = process.env.MERCHANT_ID1;
 let salt_key = process.env.SALT_KEY1;
 
 app.post("/neworder", async (req, res) => {
-  const { user, items, shippingInfo, totalPrice, MUID, transactionId } =
-    req.body;
+  const { user, items, shippingInfo, totalPrice, MUID, transactionId } = req.body;
+
+  // Determine the amount based on the transactionId prefix
+  const amount = transactionId.startsWith("TT") ? totalPrice : totalPrice * 100;
+  const status = transactionId.startsWith("TT") ? "paid" : "unpaid";
 
   // Create the order object
   const orderData = {
     merchantId: merchantId,
     user: user,
-    items: items, // Use items directly from request body
+    items: items,
     shippingInfo,
-    amount: totalPrice * 100,
+    amount: amount,  // Use the conditionally set amount
     redirectUrl: `${process.env.FRONTEND_URL1}/${transactionId}`,
     callbackUrl: `http://saviralfoods.in`,
     redirectMode: "REDIRECT",
@@ -77,15 +80,25 @@ app.post("/neworder", async (req, res) => {
     },
     MUID,
     merchantTransactionId: transactionId,
-    status: "unpaid", // Default status is unpaid, set to paid in frontend
+    status: status, // Default status is unpaid, set to paid in frontend
     createdAt: new Date(),
   };
 
   try {
     // Save order to the database
     const newOrder = new Order(orderData);
-    
+
+    // Check if merchantTransactionId starts with "TT"
+    if (transactionId.startsWith("TT")) {
+      // Just save the order without proceeding to payment
+      await newOrder.save();
+      console.log("Order placed without payment:", orderData);
+      return res.json({ message: "Order placed successfully without payment" });
+    }
+
+    // If merchantTransactionId starts with "T" but not "TT", proceed with payment
     await newOrder.save();
+    console.log("Proceeding with payment for order:", orderData);
 
     // Prepare payload for the payment request
     const keyIndex = 1;
@@ -111,16 +124,13 @@ app.post("/neworder", async (req, res) => {
       },
     };
 
-
     // Send payment request
     await axios(options)
       .then((response) => {
-
         res.json(response.data); // Send payment response to the frontend
       })
       .catch((error) => {
         console.log(error);
-
         res.status(500).send("Payment request failed");
       });
   } catch (error) {
@@ -128,6 +138,8 @@ app.post("/neworder", async (req, res) => {
     res.status(500).send("Failed to create order");
   }
 });
+
+
 
 
 app.get('/neworder/:transactionId', async (req, res) => {
